@@ -3,7 +3,8 @@ set -eu
 
 cd "$(dirname "$0")"
 
-BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+BRANCH="${DEPLOY_BRANCH:-$CURRENT_BRANCH}"
 
 if [ -n "$(git status --porcelain)" ]; then
   echo "Deploy stopped: local changes exist on the server."
@@ -15,6 +16,9 @@ fi
 echo "Deploying auditchain-gateway-dashboard from branch: $BRANCH"
 
 git fetch origin "$BRANCH"
+if [ "$CURRENT_BRANCH" != "$BRANCH" ]; then
+  git checkout "$BRANCH"
+fi
 git pull --ff-only origin "$BRANCH"
 
 if docker compose version >/dev/null 2>&1; then
