@@ -161,6 +161,21 @@ function App() {
             }
           />
           <Route
+            path="/reports"
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated}>
+                <DashboardPage
+                  view="reports"
+                  onLogout={handleLogout}
+                  onProfileUpdated={handleAuthRefresh}
+                  themePreference={themePreference}
+                  resolvedTheme={resolvedTheme}
+                  onThemeChange={setThemePreference}
+                />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/admin"
             element={
               <ProtectedRoute isAuthenticated={isAuthenticated}>
