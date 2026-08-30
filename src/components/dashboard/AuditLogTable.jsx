@@ -4,6 +4,7 @@ import Icon from '../common/Icon';
 import ActionBadge from '../common/ActionBadge';
 import VerificationModal from './VerificationModal';
 import { formatTimestamp, renderMetadataCell } from '../../utils/formatters';
+import api from '../../api';
 
 const QUICK_RANGES = [
   { key: '1h', label: 'Last 1 hour', amount: 1, unit: 'hour' },
@@ -239,6 +240,39 @@ function AuditLogTable({
   const tablePickerRef = React.useRef(null);
   const rangePickerRef = React.useRef(null);
   const rangeTriggerRef = React.useRef(null);
+  const [isExporting, setIsExporting] = React.useState(false);
+
+  const handleExportRange = async () => {
+    if (!filterDateFrom || !filterDateTo) return;
+    setIsExporting(true);
+    try {
+      const fromObj = new Date(filterDateFrom);
+      const toObj = new Date(filterDateTo);
+      toObj.setSeconds(59, 999);
+      
+      const response = await api.post('/dashboard/reports/generate', {
+        period_from: fromObj.toISOString(),
+        period_to: toObj.toISOString(),
+        format: 'csv',
+        sections: ['summary', 'logs']
+      }, {
+        responseType: 'blob'
+      });
+
+      const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `auditchain-report-${filterDateFrom}-to-${filterDateTo}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to export report:", err);
+      alert("Failed to export report. Please try again.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const filteredTableNames = React.useMemo(() => {
     const query = tableSearch.trim().toLowerCase();
@@ -716,8 +750,18 @@ function AuditLogTable({
                 disabled={isVerifyRangeLoading}
                 onClick={handleVerifyRange}
               >
-                <Icon name={isVerifyRangeLoading ? 'spinner' : 'zap'} size={14} />
+                <Icon name={isVerifyRangeLoading ? 'spinner' : 'zap'} size={14} className={isVerifyRangeLoading ? 'ac-spin' : ''} />
                 {isVerifyRangeLoading ? 'Verifying...' : 'Verify Range'}
+              </button>
+            )}
+            {filterDateFrom && filterDateTo && (
+              <button
+                className="ac-btn-ghost-action ac-date-action-btn"
+                disabled={isExporting}
+                onClick={handleExportRange}
+              >
+                <Icon name={isExporting ? 'spinner' : 'download'} size={14} className={isExporting ? 'ac-spin' : ''} />
+                {isExporting ? 'Exporting...' : 'Export CSV'}
               </button>
             )}
             {rangeVerifyResult && (

@@ -6,6 +6,7 @@ import AppearanceMenu from '../components/common/AppearanceMenu';
 import AuditDashboardOverview from '../components/dashboard/AuditDashboardOverview';
 import AuditLogsView from '../components/dashboard/AuditLogsView';
 import WebUsersView from '../components/dashboard/WebUsersView';
+import ReportsView from '../components/dashboard/ReportsView';
 import ResourceDetailModal from '../components/dashboard/ResourceDetailModal';
 import { parseJwt, mapRangeItemToVerifyStatus } from '../utils/formatters';
 
@@ -844,6 +845,15 @@ function DashboardPage({ onLogout, onProfileUpdated, view = 'dashboard', themePr
             <span className="ac-sidebar__nav-label">Web Users</span>
           </button>
 
+          <button
+            className={`ac-sidebar__nav-item${view === 'reports' ? ' ac-sidebar__nav-item--active' : ''}`}
+            onClick={() => { navigate('/reports'); setSidebarOpen(false); }}
+            title="Reports"
+          >
+            <Icon name="fileText" size={18} />
+            <span className="ac-sidebar__nav-label">Reports</span>
+          </button>
+
           {clientInfo && clientInfo.role?.toLowerCase() === 'admin' && (
             <button
               className="ac-sidebar__nav-item"
@@ -1146,6 +1156,8 @@ function DashboardPage({ onLogout, onProfileUpdated, view = 'dashboard', themePr
             </section>
           ) : view === 'web-users' ? (
             <WebUsersView onLogout={onLogout} />
+          ) : view === 'reports' ? (
+            <ReportsView />
           ) : view === 'audit-logs' ? (
             <AuditLogsView
               paginatedLogs={paginatedLogs}
@@ -1186,6 +1198,7 @@ function DashboardPage({ onLogout, onProfileUpdated, view = 'dashboard', themePr
               setCurrentPage={setCurrentPage}
               totalPages={totalPages}
               renderPageNumbers={renderPageNumbers}
+              stats={stats}
             />
           ) : (
           <>

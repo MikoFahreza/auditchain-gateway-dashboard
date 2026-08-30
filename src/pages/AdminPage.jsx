@@ -39,6 +39,14 @@ const getLatestUserActivity = (users = []) => {
   return latest?.rawValue || '';
 };
 
+const getCdcUserDisplayName = (user = {}) => (
+  user.full_name || user.fullName || user.username || user.email || 'Unknown user'
+);
+
+const getCdcUserSecondary = (user = {}) => (
+  user.email || user.username || 'No secondary identity'
+);
+
 function AdminPage({ onLogout, themePreference = 'system', resolvedTheme = 'light', onThemeChange }) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -138,14 +146,6 @@ function AdminPage({ onLogout, themePreference = 'system', resolvedTheme = 'ligh
   const [cdcClientUsers, setCdcClientUsers] = useState([]);
   const [clientCdcDetails, setClientCdcDetails] = useState({});
   const [cdcActionError, setCdcActionError] = useState('');
-  const [userTableModalClient, setUserTableModalClient] = useState(null);
-  const [userTableLoading, setUserTableLoading] = useState(false);
-  const [userTableSaving, setUserTableSaving] = useState(false);
-  const [userTableNotice, setUserTableNotice] = useState(null);
-  const [userTableForm, setUserTableForm] = useState({
-    user_table_name: '',
-    user_column_name: '',
-  });
   const [watchedTablesClient, setWatchedTablesClient] = useState(null);
   const [watchedTablesClosing, setWatchedTablesClosing] = useState(false);
   const [watchedTablesLoading, setWatchedTablesLoading] = useState(false);
@@ -321,7 +321,7 @@ function AdminPage({ onLogout, themePreference = 'system', resolvedTheme = 'ligh
     'client-users': {
       kicker: 'Client Identity Feed',
       title: 'Client Users CDC',
-      subtitle: 'Review users discovered from client databases and configure the user table watched by the remote agent.'
+      subtitle: 'Review users discovered from client databases through the user source detected by install.sh telemetry.'
     },
     kafka: {
       kicker: 'Stream Operations',
@@ -851,44 +851,6 @@ function AdminPage({ onLogout, themePreference = 'system', resolvedTheme = 'ligh
     }
   }, [selectedAgentClient]);
 
-  const handleOpenUserTableConfig = useCallback(async (client) => {
-    setUserTableModalClient(client);
-    setUserTableNotice(null);
-    setCdcActionError('');
-    setUserTableForm({
-      user_table_name: '',
-      user_column_name: '',
-    });
-
-    try {
-      setUserTableLoading(true);
-      const res = await api.get(`/admin/clients/${client.id}/detail`);
-      setClientCdcDetails(prev => ({
-        ...prev,
-        [client.id]: res.data || {},
-      }));
-      const cfg = res.data?.agent_config || {};
-      setUserTableForm({
-        user_table_name: cfg.user_table_name || '',
-        user_column_name: cfg.user_column_name || '',
-      });
-      if (!cfg.agent_url) {
-        setUserTableNotice({
-          tone: 'warning',
-          message: 'Agent config belum terdeteksi untuk client ini. Simpan tetap bisa dicoba setelah agent/telemetry tersedia.',
-        });
-      }
-    } catch (err) {
-      console.error("Failed to load user table config:", err);
-      setUserTableNotice({
-        tone: 'warning',
-        message: err.response?.data?.error || 'Existing user table config could not be loaded. You can still fill it manually.',
-      });
-    } finally {
-      setUserTableLoading(false);
-    }
-  }, []);
-
   const handleOpenWatchedTables = useCallback(async (client) => {
     if (watchedTablesCloseTimerRef.current) {
       clearTimeout(watchedTablesCloseTimerRef.current);
@@ -931,34 +893,6 @@ function AdminPage({ onLogout, themePreference = 'system', resolvedTheme = 'ligh
       if (afterClose) afterClose();
     }, 260);
   }, [watchedTablesClient]);
-
-  const handleSubmitUserTableConfig = useCallback(async (e) => {
-    e.preventDefault();
-    if (!userTableModalClient) return;
-
-    try {
-      setUserTableSaving(true);
-      setUserTableNotice(null);
-      const res = await api.put(`/admin/clients/${userTableModalClient.id}/user-table-config`, {
-        user_table_name: userTableForm.user_table_name.trim(),
-        user_column_name: userTableForm.user_column_name.trim(),
-      });
-      const status = res.data?.status;
-      setUserTableNotice({
-        tone: status === 'success_full' ? 'success' : 'warning',
-        message: res.data?.message || 'User table configuration saved.',
-      });
-      fetchData();
-    } catch (err) {
-      console.error("Failed to save user table config:", err);
-      setUserTableNotice({
-        tone: 'error',
-        message: err.response?.data?.error || 'Failed to save user table configuration.',
-      });
-    } finally {
-      setUserTableSaving(false);
-    }
-  }, [fetchData, userTableForm, userTableModalClient]);
 
   const handleDeleteKafkaConfig = useCallback(async (configId, companyName) => {
     if (!window.confirm(`Are you sure you want to delete Kafka configuration for "${companyName || 'client'}"?`)) {
@@ -1442,13 +1376,6 @@ function AdminPage({ onLogout, themePreference = 'system', resolvedTheme = 'ligh
                                 <Icon name="link" size={14} />
                               </button>
                               <button
-                                className="ac-admin-action-btn ac-admin-action-btn--neutral ac-admin-action-btn--icon"
-                                onClick={() => handleOpenUserTableConfig(client)}
-                                title="Configure client user source table"
-                              >
-                                <Icon name="database" size={14} />
-                              </button>
-                              <button
                                 className="ac-admin-action-btn ac-admin-action-btn--primary ac-admin-action-btn--icon"
                                 onClick={() => handleManageUsers(client)}
                                 title="Manage client users"
@@ -1520,7 +1447,7 @@ function AdminPage({ onLogout, themePreference = 'system', resolvedTheme = 'ligh
                 <div className="ac-card__header ac-admin-registry-header">
                   <div className="ac-admin-registry-header__copy">
                     <div className="ac-card__title">Client Database Users</div>
-                    <div className="ac-admin-card-sub">Data from <code>GET /api/admin/client-cdc-users</code>. Configure the watched table when a client has no detected users yet.</div>
+                    <div className="ac-admin-card-sub">Data from <code>GET /api/admin/client-cdc-users</code>. User source metadata is reported automatically by the client installer.</div>
                   </div>
                   <button className="ac-btn-ghost-action" onClick={fetchData}>
                     <Icon name="history" size={15} />
@@ -1575,13 +1502,6 @@ function AdminPage({ onLogout, themePreference = 'system', resolvedTheme = 'ligh
                                 >
                                   <Icon name="list" size={14} />
                                   <span>View Tables</span>
-                                </button>
-                                <button
-                                  className="ac-admin-action-btn ac-admin-action-btn--primary"
-                                  onClick={() => handleOpenUserTableConfig(client)}
-                                >
-                                  <Icon name="database" size={14} />
-                                  <span>Configure</span>
                                 </button>
                               </div>
                             </td>
@@ -2488,24 +2408,41 @@ function AdminPage({ onLogout, themePreference = 'system', resolvedTheme = 'ligh
                       <h3>User Source</h3>
                       <p>{agentCfg.db_engine || 'Unknown engine'} · {agentCfg.db_name || 'No database metadata'}</p>
                     </div>
-                    <button
-                      type="button"
-                      className="ac-btn-ghost-action"
-                      onClick={() => {
-                        const client = watchedTablesClient;
-                        handleCloseWatchedTables(() => handleOpenUserTableConfig(client));
-                      }}
-                    >
-                      <Icon name="database" size={14} />
-                      Configure
-                    </button>
                   </div>
                   <div className="ac-watched-source-card">
                     <span>Table</span>
-                    <code>{agentCfg.user_table_name || 'Not configured'}</code>
+                    <code>{agentCfg.user_table_name || 'Waiting for telemetry'}</code>
                     <span>Column</span>
-                    <code>{agentCfg.user_column_name || 'Not configured'}</code>
+                    <code>{agentCfg.user_column_name || 'Auto-detected'}</code>
                   </div>
+                </section>
+
+                <section className="ac-watched-drawer-section">
+                  <div className="ac-watched-drawer-section__head">
+                    <div>
+                      <h3>Detected Client Users</h3>
+                      <p>Users declared from the client system, ordered by latest CDC activity.</p>
+                    </div>
+                  </div>
+                  {detectedUsers.length > 0 ? (
+                    <div className="ac-watched-user-list">
+                      {detectedUsers.map((user, index) => (
+                        <div className="ac-watched-user-row" key={`${watchedTablesClient.id}-detected-user-${user.username || user.email || index}`}>
+                          <span className="ac-watched-user-row__avatar">
+                            {getCdcUserDisplayName(user).charAt(0).toUpperCase()}
+                          </span>
+                          <div className="ac-watched-user-row__identity">
+                            <strong>{getCdcUserDisplayName(user)}</strong>
+                            <small>{getCdcUserSecondary(user)}</small>
+                          </div>
+                          <code>{user.source_table || agentCfg.user_table_name || 'source pending'}</code>
+                          <time>{user.last_seen_at ? formatTimestamp(user.last_seen_at) : 'No activity time'}</time>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="ac-admin-empty-state">No detected users from this client yet.</div>
+                  )}
                 </section>
 
                 <section className="ac-watched-drawer-section">
@@ -2575,92 +2512,6 @@ function AdminPage({ onLogout, themePreference = 'system', resolvedTheme = 'ligh
         );
       })()}
 
-      {/* ===== MODAL: USER TABLE CDC CONFIG ===== */}
-      {userTableModalClient && (
-        <div className="ac-modal-overlay" onClick={() => setUserTableModalClient(null)}>
-          <div className="ac-modal" style={{ maxWidth: '620px', width: '90%' }} onClick={e => e.stopPropagation()}>
-            <div className="ac-modal__header">
-              <div>
-                <div className="ac-modal__title">Client User Source: {userTableModalClient.company_name}</div>
-                <div className="ac-modal__subtitle">Point CDC to the table and column that identify users in the client database.</div>
-              </div>
-              <button className="ac-modal__close" onClick={() => setUserTableModalClient(null)} aria-label="Close user source">
-                <Icon name="x" size={18} />
-              </button>
-            </div>
-            <div className="ac-modal__body" style={{ padding: '20px 24px' }}>
-              {userTableNotice && (
-                <div className={`ac-cdc-config-notice ac-cdc-config-notice--${userTableNotice.tone}`}>
-                  {userTableNotice.message}
-                </div>
-              )}
-
-              {userTableLoading ? (
-                <div className="ac-profile-loading">
-                  <Icon name="spinner" size={18} />
-                  Loading user table config...
-                </div>
-              ) : (
-                <form onSubmit={handleSubmitUserTableConfig}>
-                  {(() => {
-                    const detail = clientCdcDetails[userTableModalClient.id] || {};
-                    const agentCfg = detail.agent_config || {};
-                    const watchedTables = splitListValue(agentCfg.db_tables);
-                    if (watchedTables.length === 0 && !agentCfg.db_name && !agentCfg.connector_status) return null;
-
-                    return (
-                      <div className="ac-cdc-config-context">
-                        <div>
-                          <strong>{agentCfg.db_engine || 'Unknown engine'}</strong>
-                          <span>{agentCfg.db_name || 'No database name'} · {agentCfg.connector_status || 'unknown connector'}</span>
-                        </div>
-                        {watchedTables.length > 0 && (
-                          <div className="ac-cdc-table-chips">
-                            {watchedTables.map(table => <code key={`${userTableModalClient.id}-modal-${table}`}>{table}</code>)}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-                  <div className="ac-form-grid">
-                    <label className="ac-form-field">
-                      <span className="ac-form-label">User Table Name</span>
-                      <input
-                        className="ac-form-input ac-form-input--lg"
-                        value={userTableForm.user_table_name}
-                        onChange={e => setUserTableForm(form => ({ ...form, user_table_name: e.target.value }))}
-                        placeholder="public.users or account"
-                        required
-                      />
-                    </label>
-                    <label className="ac-form-field">
-                      <span className="ac-form-label">User Column Name</span>
-                      <input
-                        className="ac-form-input ac-form-input--lg"
-                        value={userTableForm.user_column_name}
-                        onChange={e => setUserTableForm(form => ({ ...form, user_column_name: e.target.value }))}
-                        placeholder="username or email"
-                        required
-                      />
-                    </label>
-                  </div>
-                  <div className="ac-cdc-config-help">
-                    This saves locally first, then asks the remote client agent through VPN to include the user table in Debezium. Offline clients return a warning while keeping the local config.
-                  </div>
-                  <div className="ac-form-actions" style={{ marginTop: 20, justifyContent: 'flex-end' }}>
-                    <button type="button" className="ac-btn-ghost-action" onClick={() => setUserTableModalClient(null)}>Close</button>
-                    <button type="submit" className="ac-btn-primary" disabled={userTableSaving}>
-                      <Icon name={userTableSaving ? 'spinner' : 'checkmark'} size={15} />
-                      {userTableSaving ? 'Saving...' : 'Save User Source'}
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ===== MODAL: KONFIGURASI AGENT LAPIS 3 ===== */}
       {showAgentModal && selectedAgentClient && (
         <div className="ac-modal-overlay" onClick={() => setShowAgentModal(false)}>
@@ -2681,8 +2532,6 @@ function AdminPage({ onLogout, themePreference = 'system', resolvedTheme = 'ligh
             </div>
 
             <div className="ac-modal__body" style={{ padding: '20px 24px' }}>
-
-              {/* Status Bar */}
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -2717,7 +2566,6 @@ function AdminPage({ onLogout, themePreference = 'system', resolvedTheme = 'ligh
                 )}
               </div>
 
-              {/* Ping Result Banner */}
               {agentPingResult && (
                 <div style={{
                   padding: '12px 16px',
@@ -2741,7 +2589,6 @@ function AdminPage({ onLogout, themePreference = 'system', resolvedTheme = 'ligh
                 </div>
               )}
 
-              {/* Action Alerts */}
               {agentActionError && (
                 <div style={{ padding: '10px 14px', borderRadius: '6px', backgroundColor: 'rgba(186,26,26,0.1)', color: 'var(--color-error)', fontSize: '12px', fontWeight: 600, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Icon name="warn" size={14} />
@@ -2755,7 +2602,6 @@ function AdminPage({ onLogout, themePreference = 'system', resolvedTheme = 'ligh
                 </div>
               )}
 
-              {/* Agent Form */}
               {agentLoading ? (
                 <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--color-outline)' }}>Loading Agent configuration...</div>
               ) : (
@@ -2844,13 +2690,10 @@ function AdminPage({ onLogout, themePreference = 'system', resolvedTheme = 'ligh
                   )}
                 </>
               )}
-
             </div>
           </div>
         </div>
       )}
-
-
 
     </div>
   );

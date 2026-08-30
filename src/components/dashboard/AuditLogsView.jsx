@@ -1,5 +1,6 @@
 import React from 'react';
 import AuditLogTable from './AuditLogTable';
+import StatCards from './StatCards';
 
 function AuditLogsView(props) {
   return (
@@ -16,6 +17,8 @@ function AuditLogsView(props) {
           </div>
         </div>
       </section>
+
+      {props.stats && <StatCards stats={props.stats} />}
 
       <AuditLogTable {...props} />
     </>
