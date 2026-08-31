@@ -101,11 +101,48 @@ const truncateMiddle = (value = '', maxLength = 26) => {
   return `${text.slice(0, edge)}...${text.slice(-edge)}`;
 };
 
+const isTechnicalIdentifier = (value) => {
+  if (!value) return false;
+  const str = String(value);
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const atUuidRegex = /^@[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const longHashRegex = /^[0-9a-fA-F]{30,}$/;
+  return uuidRegex.test(str) || atUuidRegex.test(str) || longHashRegex.test(str);
+};
+
+const getEmailLocalPart = (email) => {
+  if (!email || email === '-') return null;
+  return email.split('@')[0];
+};
+
+const getDisplayUsername = ({ rawUsername, email, fullName, fallbackIndex }) => {
+  if (rawUsername && !isTechnicalIdentifier(rawUsername)) {
+    return rawUsername;
+  }
+  const emailLocalPart = getEmailLocalPart(email);
+  if (emailLocalPart && !isTechnicalIdentifier(emailLocalPart)) {
+    return emailLocalPart;
+  }
+  if (fullName && !isTechnicalIdentifier(fullName)) {
+    return fullName;
+  }
+  return `user-${fallbackIndex}`;
+};
+
 const normalizeUser = (user, index) => {
   const raw = parseRawData(user.raw_data || user.rawData || user.metadata);
-  const username = pickFirst(user.username, raw.username, raw.user_name, raw.login, raw.userid, raw.user_id, `user-${index + 1}`);
+  const rawUsernameCandidate = pickFirst(user.username, raw.username, raw.user_name, raw.login, raw.userid, raw.user_id);
   const email = pickFirst(user.email, raw.email, raw.mail, raw.email_address, '-');
-  const fullName = pickFirst(user.full_name, user.fullName, user.name, raw.full_name, raw.fullName, raw.name, raw.nama, username);
+  const rawFullNameCandidate = pickFirst(user.full_name, user.fullName, user.name, raw.full_name, raw.fullName, raw.name, raw.nama);
+  
+  const username = getDisplayUsername({
+    rawUsername: rawUsernameCandidate,
+    email,
+    fullName: rawFullNameCandidate,
+    fallbackIndex: index + 1
+  });
+  
+  const fullName = rawFullNameCandidate || username;
   const role = pickFirst(user.role, raw.role, raw.roles, raw.user_role, raw.jabatan, 'Client User');
   const sourceTable = pickFirst(user.source_table, user.sourceTable, raw.source_table, raw.table_name, '-');
   const lastSeenAt = pickFirst(user.last_seen_at, user.lastSeenAt, user.updated_at, user.updatedAt, user.created_at, user.createdAt);
@@ -114,9 +151,12 @@ const normalizeUser = (user, index) => {
     .filter(([, value]) => value !== undefined && value !== null && String(value).trim() !== '');
   const rawSummary = rawEntries.slice(0, 3).map(([key, value]) => `${key}: ${value}`).join(', ');
 
+  const technicalUserId = (rawUsernameCandidate && isTechnicalIdentifier(rawUsernameCandidate)) ? rawUsernameCandidate : null;
+
   return {
     id: pickFirst(user.id, user.user_id, user.userId, `${username}-${index}`),
     username,
+    technicalUserId,
     email,
     fullName,
     role,
@@ -149,6 +189,22 @@ const getActivityStatus = (log) => {
     return 'pending';
   }
   return 'success';
+};
+
+const getSessionStatus = (latestActivity) => {
+  if (!latestActivity) return 'inactive';
+  
+  const action = String(latestActivity.action || '').toUpperCase();
+  const timeDiff = Date.now() - getTimestampMs(latestActivity.timestamp);
+  
+  if (action === 'LOGOUT' || action === 'SIGN_OUT') return 'offline';
+  
+  // If LOGIN or any other activity (INSERT, UPDATE) within the last 30 minutes, consider them Online.
+  if (timeDiff < 30 * 60 * 1000) {
+    return 'online';
+  }
+  
+  return 'offline';
 };
 
 const normalizeLog = (log) => {
@@ -199,18 +255,21 @@ const buildActivityMap = (logs) => {
 const attachLatestActivities = (users, activityMap) => users.map(user => {
   const keys = [
     ...getActorKeys(user.username),
+    ...(user.technicalUserId ? getActorKeys(user.technicalUserId) : []),
     ...getActorKeys(user.email),
     ...getActorKeys(user.fullName)
   ];
   const latestActivity = keys.map(key => activityMap.get(key)).find(Boolean) || null;
   const actionTime = latestActivity?.timestamp || user.lastSeenAt;
   const behaviorStatus = getActivityStatus(latestActivity);
+  const sessionStatus = getSessionStatus(latestActivity);
 
   return {
     ...user,
     latestActivity,
     actionTime,
-    behaviorStatus
+    behaviorStatus,
+    sessionStatus
   };
 });
 
@@ -307,10 +366,13 @@ function WebUsersView({ onLogout }) {
   const [isDrawerClosing, setIsDrawerClosing] = React.useState(false);
   const [copyNotice, setCopyNotice] = React.useState('');
 
-  const fetchUsers = React.useCallback(async () => {
-    setIsLoading(true);
-    setErrorState(null);
-    setCopyNotice('');
+  const fetchUsers = React.useCallback(async (isSilent = false) => {
+    const silent = isSilent === true;
+    if (!silent) {
+      setIsLoading(true);
+      setErrorState(null);
+      setCopyNotice('');
+    }
 
     try {
       const [usersRes, logsRes] = await Promise.allSettled([
@@ -336,15 +398,19 @@ function WebUsersView({ onLogout }) {
         onLogout();
         return;
       }
-      setErrorState(getWebUsersError(err));
-      setUsers([]);
+      if (!silent) setErrorState(getWebUsersError(err));
+      if (!silent) setUsers([]);
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   }, [onLogout]);
 
   React.useEffect(() => {
-    fetchUsers();
+    fetchUsers(false);
+    const interval = setInterval(() => {
+      fetchUsers(true);
+    }, 10000);
+    return () => clearInterval(interval);
   }, [fetchUsers]);
 
   React.useEffect(() => {
@@ -454,7 +520,7 @@ function WebUsersView({ onLogout }) {
           <p>Track users detected from the client database and review their identity coverage from CDC events.</p>
         </div>
         <div className="ac-web-users-page-head__actions">
-          <button type="button" className="ac-btn-ghost-action" onClick={fetchUsers} disabled={isLoading}>
+          <button type="button" className="ac-btn-ghost-action" onClick={() => fetchUsers(false)} disabled={isLoading}>
             <Icon name={isLoading ? 'spinner' : 'history'} size={14} />
             Refresh
           </button>
@@ -564,7 +630,7 @@ function WebUsersView({ onLogout }) {
               <strong>{errorState.title}</strong>
               <span>{errorState.body}</span>
             </div>
-            <button type="button" className="ac-btn-ghost-action" onClick={fetchUsers} disabled={isLoading}>
+            <button type="button" className="ac-btn-ghost-action" onClick={() => fetchUsers(false)} disabled={isLoading}>
               <Icon name={isLoading ? 'spinner' : 'history'} size={14} />
               Retry
             </button>
@@ -576,7 +642,6 @@ function WebUsersView({ onLogout }) {
             <thead>
               <tr>
                 <th>User</th>
-                <th>Username</th>
                 <th>Email</th>
                 <th>Last Activity</th>
                 <th>Action Time</th>
@@ -586,7 +651,7 @@ function WebUsersView({ onLogout }) {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={6}>
+                  <td colSpan={5}>
                     <div className="ac-empty ac-empty--loading">
                       <div className="ac-empty__icon">
                         <Icon name="spinner" size={30} />
@@ -599,7 +664,7 @@ function WebUsersView({ onLogout }) {
                 </tr>
               ) : !errorState && paginatedUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={6}>
+                  <td colSpan={5}>
                     <div className="ac-empty">
                       <div className="ac-empty__icon">
                         <Icon name="inbox" size={30} />
@@ -625,9 +690,17 @@ function WebUsersView({ onLogout }) {
                 >
                   <td data-label="User">
                     <div className="ac-detected-user-cell">
-                      <span className={`ac-detected-user-avatar ac-detected-user-avatar--${user.status}`}>
-                        {getInitials(user.fullName)}
-                      </span>
+                      <div style={{ position: 'relative', display: 'inline-flex' }}>
+                        <span className={`ac-detected-user-avatar ac-detected-user-avatar--${user.status}`}>
+                          {getInitials(user.fullName)}
+                        </span>
+                        {user.sessionStatus === 'online' && (
+                          <span style={{ position: 'absolute', bottom: '0', right: '-2px', width: '10px', height: '10px', backgroundColor: '#10b981', border: '2px solid var(--surface-main)', borderRadius: '50%' }} title="Online"></span>
+                        )}
+                        {user.sessionStatus === 'offline' && (
+                          <span style={{ position: 'absolute', bottom: '0', right: '-2px', width: '10px', height: '10px', backgroundColor: '#6b7280', border: '2px solid var(--surface-main)', borderRadius: '50%' }} title="Offline"></span>
+                        )}
+                      </div>
                       <span className="ac-detected-user-cell__copy">
                         <strong title={user.fullName}>{user.fullName}</strong>
                         <small title={user.rawSummary || user.role}>
@@ -635,11 +708,6 @@ function WebUsersView({ onLogout }) {
                         </small>
                       </span>
                     </div>
-                  </td>
-                  <td data-label="Username">
-                    <span className="ac-table__mono ac-web-users-truncate" title={`@${user.username}`}>
-                      @{truncateMiddle(user.username, 28)}
-                    </span>
                   </td>
                   <td data-label="Email">
                     <div className="ac-web-users-device">
@@ -711,9 +779,17 @@ function WebUsersView({ onLogout }) {
           >
             <div className="ac-web-users-drawer__head">
               <div className="ac-detected-user-cell">
-                <span className={`ac-detected-user-avatar ac-detected-user-avatar--${selectedUser.status}`}>
-                  {getInitials(selectedUser.fullName)}
-                </span>
+                <div style={{ position: 'relative', display: 'inline-flex' }}>
+                  <span className={`ac-detected-user-avatar ac-detected-user-avatar--${selectedUser.status}`}>
+                    {getInitials(selectedUser.fullName)}
+                  </span>
+                  {selectedUser.sessionStatus === 'online' && (
+                    <span style={{ position: 'absolute', bottom: '0', right: '-2px', width: '10px', height: '10px', backgroundColor: '#10b981', border: '2px solid var(--surface-main)', borderRadius: '50%' }} title="Online"></span>
+                  )}
+                  {selectedUser.sessionStatus === 'offline' && (
+                    <span style={{ position: 'absolute', bottom: '0', right: '-2px', width: '10px', height: '10px', backgroundColor: '#6b7280', border: '2px solid var(--surface-main)', borderRadius: '50%' }} title="Offline"></span>
+                  )}
+                </div>
                 <span className="ac-detected-user-cell__copy">
                   <strong>{selectedUser.fullName}</strong>
                   <small>@{truncateMiddle(selectedUser.username, 24)}</small>
@@ -745,8 +821,30 @@ function WebUsersView({ onLogout }) {
                     <dd>{selectedUser.role}</dd>
                   </div>
                   <div>
-                    <dt>Last seen</dt>
+                    <dt>Profile synced</dt>
                     <dd>{formatDateTime(selectedUser.lastSeenAt)}</dd>
+                  </div>
+                  <div>
+                    <dt>Session status</dt>
+                    <dd>
+                      {selectedUser.sessionStatus === 'online' && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#10b981', fontWeight: '500' }}>
+                          <svg width="10" height="10" viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="5" cy="5" r="5" fill="currentColor" />
+                          </svg>
+                          Online (Active)
+                        </span>
+                      )}
+                      {selectedUser.sessionStatus === 'offline' && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#6b7280', fontWeight: '500' }}>
+                          <svg width="10" height="10" viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="5" cy="5" r="4" fill="transparent" stroke="currentColor" strokeWidth="2" />
+                          </svg>
+                          Offline
+                        </span>
+                      )}
+                      {selectedUser.sessionStatus === 'inactive' && <span style={{ color: 'var(--text-muted)' }}>No Activity</span>}
+                    </dd>
                   </div>
                   <div>
                     <dt>Identity status</dt>
@@ -796,6 +894,12 @@ function WebUsersView({ onLogout }) {
                     <dt>Source table</dt>
                     <dd>{selectedUser.sourceTable === '-' ? 'Not returned by this endpoint' : selectedUser.sourceTable}</dd>
                   </div>
+                  {selectedUser.technicalUserId && (
+                    <div>
+                      <dt>Technical user ID</dt>
+                      <dd className="ac-table__mono">{selectedUser.technicalUserId}</dd>
+                    </div>
+                  )}
                 </dl>
               </section>
 
