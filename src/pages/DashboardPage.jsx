@@ -1157,7 +1157,7 @@ function DashboardPage({ onLogout, onProfileUpdated, view = 'dashboard', themePr
           ) : view === 'web-users' ? (
             <WebUsersView onLogout={onLogout} />
           ) : view === 'reports' ? (
-            <ReportsView />
+            <ReportsView selectedClient={selectedClient} />
           ) : view === 'audit-logs' ? (
             <AuditLogsView
               paginatedLogs={paginatedLogs}
