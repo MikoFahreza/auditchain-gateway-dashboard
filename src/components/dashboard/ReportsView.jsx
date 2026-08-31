@@ -61,6 +61,16 @@ function ReportsView() {
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error("Failed to generate report:", err);
+      if (err.response && err.response.data instanceof Blob) {
+        try {
+          const text = await err.response.data.text();
+          const errData = JSON.parse(text);
+          setError(errData.error || 'Failed to generate report.');
+          return;
+        } catch (e) {
+          // Fallback if parsing fails
+        }
+      }
       setError('Failed to generate report. Please try again.');
     } finally {
       setIsGenerating(false);
@@ -139,16 +149,15 @@ function ReportsView() {
                 />
                 CSV (Spreadsheet)
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-muted)' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-main)' }}>
                 <input 
                   type="radio" 
                   name="format" 
                   value="pdf" 
-                  disabled
                   checked={format === 'pdf'} 
                   onChange={(e) => setFormat(e.target.value)} 
                 />
-                PDF (Coming Soon)
+                PDF Document
               </label>
             </div>
           </div>
