@@ -110,7 +110,7 @@ html[data-ac-theme='dark'] .lp-root {
 .lp-nav {
   position: sticky;
   top: 0;
-  z-index: 50;
+  z-index: 70;
   background: var(--lp-nav-bg);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
@@ -136,10 +136,16 @@ html[data-ac-theme='dark'] .lp-root {
 .lp-nav-inner {
   max-width: 116rem;
   margin: 0 auto;
-  display: grid;
-  grid-template-columns: minmax(14rem, 1fr) auto minmax(14rem, 1fr);
+  display: flex;
+  justify-content: space-between;
   align-items: center;
   gap: 1.25rem;
+}
+@media (min-width: 1024px) {
+  .lp-nav-inner {
+    display: grid;
+    grid-template-columns: minmax(14rem, 1fr) auto minmax(14rem, 1fr);
+  }
 }
 
 /* Logo */
@@ -340,15 +346,15 @@ html[data-ac-theme='dark'] .lp-root {
   transition: background-color 0.2s, border-color 0.2s, color 0.2s;
 }
 .lp-floating-preferences-option:hover {
-  color: var(--lp-primary);
+  color: #60c8ff;
   border-color: rgba(96, 200, 255, 0.34);
   background: rgba(96, 200, 255, 0.08);
 }
-.lp-floating-preferences-option--active {
-  background: var(--lp-primary);
+.lp-floating-preferences-option.lp-floating-preferences-option--active {
+  background: #0b6fb3;
   color: #fff;
-  border-color: var(--lp-primary);
-  box-shadow: 0 10px 22px rgba(59, 130, 246, 0.22);
+  border-color: #0b6fb3;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
 }
 
 .lp-floating-preferences-option .material-symbols-outlined {
@@ -994,6 +1000,7 @@ html[data-ac-theme='dark'] .lp-floating-preferences-trigger {
   align-items: flex-start;
   margin-bottom: 0.5rem;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
 .lp-layer-title { font-weight: 600; color: var(--lp-on-bg); font-size: 0.875rem; }
 .lp-layer-badge {
@@ -1201,10 +1208,11 @@ html[data-ac-theme='dark'] .lp-floating-preferences-trigger {
 
 .lp-arch-steps {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: 1fr;
   gap: 0.75rem;
 }
-@media (min-width: 640px) { .lp-arch-steps { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 640px) { .lp-arch-steps { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1024px) { .lp-arch-steps { grid-template-columns: repeat(3, 1fr); } }
 @media (min-width: 768px) { .lp-arch-steps { gap: 1rem; } }
 
 .lp-arch-step-btn {
@@ -1455,9 +1463,14 @@ html[data-ac-theme='dark'] .lp-floating-preferences-trigger {
   margin-top: 2rem;
   display: flex;
   gap: 0.75rem;
-  flex-wrap: wrap;
+  overflow-x: auto;
+  white-space: nowrap;
+  flex-wrap: nowrap;
+  padding-bottom: 0.5rem;
+  -webkit-overflow-scrolling: touch;
 }
 .lp-integ-tab {
+  flex-shrink: 0;
   padding: 0.5rem 1rem;
   border-radius: 0.5rem;
   font-size: 0.75rem;
@@ -1781,11 +1794,11 @@ html[data-ac-theme='dark'] .lp-floating-preferences-trigger {
    ================================================================ */
 .lp-wa-float {
   position: fixed;
-  bottom: 1.5rem;
-  right: 1.5rem;
-  z-index: 50;
-  width: 3.5rem;
-  height: 3.5rem;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 40;
+  width: 3rem;
+  height: 3rem;
   border-radius: 9999px;
   background: #25D366;
   box-shadow: 0 20px 25px -5px rgba(37, 211, 102, 0.3);
