@@ -162,6 +162,20 @@ function DashboardPage({ onLogout, onProfileUpdated, view = 'dashboard', themePr
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileError, setProfileError] = useState('');
   const [profileSuccess, setProfileSuccess] = useState('');
+  const [auditorCompanyName, setAuditorCompanyName] = useState('');
+
+  // Latar belakang fetch company name untuk Auditor jika tidak ada di token
+  useEffect(() => {
+    let cancelled = false;
+    api.get('/auth/me')
+      .then(res => {
+        if (!cancelled && res.data?.company_name) {
+          setAuditorCompanyName(res.data.company_name);
+        }
+      })
+      .catch(() => {}); // silent catch
+    return () => { cancelled = true; };
+  }, []);
 
   // Fetch client list for admin dropdown
   useEffect(() => {
@@ -608,7 +622,7 @@ function DashboardPage({ onLogout, onProfileUpdated, view = 'dashboard', themePr
 
   const hasLocalFilter = searchQuery || filterAction !== 'ALL' || filterVerification !== 'ALL';
   const displayTotal = isRangeInspectionMode ? filteredLogs.length : (hasLocalFilter ? filteredLogs.length : totalLogsCount);
-  const workspaceName = clientInfo?.company_name || adminClients.find(c => c.id === clientInfo?.client_id)?.company_name || 'Client Workspace';
+  const workspaceName = auditorCompanyName || clientInfo?.company_name || adminClients.find(c => c.id === clientInfo?.client_id)?.company_name || 'Client Workspace';
   const latestActivity = recentLogs[0];
   const profileStats = [
     { label: 'Total Logs', value: stats.total_logs || 0, icon: 'database', tone: 'blue' },
@@ -882,15 +896,15 @@ function DashboardPage({ onLogout, onProfileUpdated, view = 'dashboard', themePr
                   </span>
                 </div>
               </div>
-              {clientInfo.role?.toLowerCase() === 'admin' && (
-                <div className="ac-sidebar__identity-client">
-                  <Icon name="database" size={14} />
-                  <span className="ac-sidebar__identity-workspace">
-                    <strong>{adminClients.find(c => c.id === clientInfo.client_id)?.company_name || clientInfo.company_name || 'Client Workspace'}</strong>
+              <div className="ac-sidebar__identity-client">
+                <Icon name="database" size={14} />
+                <span className="ac-sidebar__identity-workspace">
+                  <strong>{workspaceName}</strong>
+                  {clientInfo.role?.toLowerCase() === 'admin' && clientInfo.client_id && (
                     <small title={clientInfo.client_id}>{clientInfo.client_id}</small>
-                  </span>
-                </div>
-              )}
+                  )}
+                </span>
+              </div>
             </div>
           )}
           <button
@@ -1201,30 +1215,30 @@ function DashboardPage({ onLogout, onProfileUpdated, view = 'dashboard', themePr
               stats={stats}
             />
           ) : (
-          <>
-            {/* Hero Section */}
-            <section className="ac-hero">
-              <div className="ac-hero__pattern" />
-              <div className="ac-hero__content">
-                <div className="ac-hero__left">
-                  <h1 className="ac-hero__title">
-                    🛡️ Auditchain Gateway Dashboard
-                  </h1>
-                  <p className="ac-hero__subtitle">
-                    Monitor audit logs and verify blockchain transactions in real-time.
-                    Ensure the highest data integrity across the database infrastructure network.
-                  </p>
+            <>
+              {/* Hero Section */}
+              <section className="ac-hero">
+                <div className="ac-hero__pattern" />
+                <div className="ac-hero__content">
+                  <div className="ac-hero__left">
+                    <h1 className="ac-hero__title">
+                      🛡️ Auditchain Gateway Dashboard
+                    </h1>
+                    <p className="ac-hero__subtitle">
+                      Monitor audit logs and verify blockchain transactions in real-time.
+                      Ensure the highest data integrity across the database infrastructure network.
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </section>
+              </section>
 
-            <AuditDashboardOverview
-              stats={stats}
-              selectedClient={selectedClient}
-              onOpenAuditLogs={() => navigate('/audit-logs')}
-            />
+              <AuditDashboardOverview
+                stats={stats}
+                selectedClient={selectedClient}
+                onOpenAuditLogs={() => navigate('/audit-logs')}
+              />
 
-          </>
+            </>
           )}
 
         </div>

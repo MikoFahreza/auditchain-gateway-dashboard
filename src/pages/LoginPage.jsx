@@ -60,8 +60,7 @@ function LoginPage({ onLogin }) {
             <circle cx="200" cy="500" r="12" fill="rgba(255,255,255,0.18)" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
             <circle cx="400" cy="560" r="16" fill="rgba(255,255,255,0.20)" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5" />
             <circle cx="560" cy="480" r="9" fill="rgba(255,255,255,0.20)" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
-            <text x="274" y="305" fontSize="8" textAnchor="middle" fill="rgba(255,255,255,0.7)" fontFamily="monospace">#</text>
-            <text x="395" y="565" fontSize="9" textAnchor="middle" fill="rgba(255,255,255,0.7)" fontFamily="monospace">#</text>
+            {/* removed hash marks */}
             <circle cx="620" cy="100" r="180" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="40" />
             <circle cx="-30" cy="750" r="200" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="60" />
           </svg>
