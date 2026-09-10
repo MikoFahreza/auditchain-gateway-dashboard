@@ -11726,3 +11726,351 @@ html[data-ac-theme='dark'] .ac-report-badge--pdf {
   background: rgba(53, 212, 179, 0.14);
   color: var(--color-tertiary);
 }
+
+/* ================================================================
+   UNIFIED ADMIN CLIENT REGISTRY
+   ================================================================ */
+.ac-admin-client-table--unified {
+  min-width: 1220px;
+}
+
+.ac-admin-client-table--unified th:nth-child(1),
+.ac-admin-client-table--unified td:nth-child(1) { width: 22%; }
+.ac-admin-client-table--unified th:nth-child(2),
+.ac-admin-client-table--unified td:nth-child(2) { width: 11%; }
+.ac-admin-client-table--unified th:nth-child(3),
+.ac-admin-client-table--unified td:nth-child(3) { width: 13%; }
+.ac-admin-client-table--unified th:nth-child(4),
+.ac-admin-client-table--unified td:nth-child(4) { width: 15%; }
+.ac-admin-client-table--unified th:nth-child(5),
+.ac-admin-client-table--unified td:nth-child(5) { width: 12%; }
+.ac-admin-client-table--unified th:nth-child(6),
+.ac-admin-client-table--unified td:nth-child(6) { width: 18%; }
+.ac-admin-client-table--unified th:nth-child(7),
+.ac-admin-client-table--unified td:nth-child(7) { width: 9%; }
+
+.ac-admin-client-row {
+  cursor: pointer;
+  outline: none;
+}
+
+.ac-admin-client-row:hover td,
+.ac-admin-client-row:focus-visible td {
+  background: rgba(0, 104, 89, 0.045);
+}
+
+.ac-admin-client-row:focus-visible td:first-child {
+  box-shadow: inset 3px 0 0 var(--color-tertiary);
+}
+
+.ac-admin-registry-stack {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+}
+
+.ac-admin-registry-stack small {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--color-on-surface-variant);
+  font-size: 10.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ac-admin-table-empty {
+  padding: 32px 0 !important;
+  color: var(--color-outline);
+  text-align: center;
+}
+
+.ac-client-readiness-badge {
+  display: inline-flex;
+  min-height: 26px;
+  align-items: center;
+  padding: 0 9px;
+  border: 1px solid rgba(83, 101, 121, 0.16);
+  border-radius: 999px;
+  background: rgba(83, 101, 121, 0.08);
+  color: var(--color-on-surface-variant);
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.ac-client-readiness-badge--active {
+  border-color: rgba(7, 134, 111, 0.24);
+  background: rgba(7, 134, 111, 0.1);
+  color: var(--user-teal);
+}
+
+.ac-client-readiness-badge--inactive {
+  border-color: rgba(186, 26, 26, 0.2);
+  background: rgba(186, 26, 26, 0.08);
+  color: var(--color-error);
+}
+
+.ac-admin-detail-button {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  border: 1px solid rgba(0, 104, 89, 0.2);
+  border-radius: 8px;
+  background: rgba(0, 104, 89, 0.08);
+  color: var(--user-teal);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ac-admin-detail-button:hover {
+  background: rgba(0, 104, 89, 0.14);
+}
+
+.ac-client-detail-drawer {
+  max-width: min(760px, 100vw);
+}
+
+.ac-client-detail-drawer__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--color-outline-variant);
+}
+
+.ac-client-detail-drawer__identity {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ac-client-detail-drawer__identity > div:last-child {
+  min-width: 0;
+}
+
+.ac-client-detail-drawer__identity h2 {
+  margin: 0 0 4px;
+  overflow: hidden;
+  color: var(--color-on-surface);
+  font-size: 17px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ac-client-detail-drawer__identity code {
+  display: block;
+  overflow: hidden;
+  color: var(--color-on-surface-variant);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ac-client-detail-drawer__badges {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ac-client-detail-drawer__connector {
+  min-height: 27px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 9px;
+  border: 1px solid var(--color-outline-variant);
+  border-radius: 999px;
+  color: var(--color-on-surface-variant);
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+
+.ac-client-detail-drawer__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px 28px;
+}
+
+.ac-client-detail-drawer__loading {
+  min-height: 44px;
+  margin-bottom: 12px;
+}
+
+.ac-client-detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ac-client-detail-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ac-client-detail-summary-grid > div {
+  min-width: 0;
+  min-height: 74px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  padding: 13px;
+  border: 1px solid rgba(7, 52, 95, 0.08);
+  border-radius: 10px;
+  background: rgba(248, 250, 252, 0.82);
+}
+
+.ac-client-detail-summary-grid span,
+.ac-client-detail-key-values > span {
+  color: var(--color-on-surface-variant);
+  font-size: 10px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.ac-client-detail-summary-grid strong {
+  overflow: hidden;
+  color: var(--color-on-surface);
+  font-size: 13px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ac-client-detail-key-values {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 9px 12px;
+  padding: 13px;
+  border: 1px solid var(--color-outline-variant);
+  border-radius: 10px;
+  background: var(--color-surface-container-low);
+}
+
+.ac-client-detail-key-values code {
+  overflow: hidden;
+  color: var(--color-on-surface);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ac-client-detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.ac-client-detail-danger-zone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 15px;
+  border: 1px solid rgba(186, 26, 26, 0.2);
+  border-radius: 10px;
+  background: rgba(186, 26, 26, 0.055);
+}
+
+.ac-client-detail-danger-zone strong,
+.ac-client-detail-danger-zone span {
+  display: block;
+}
+
+.ac-client-detail-danger-zone strong {
+  color: var(--color-error);
+  font-size: 13px;
+}
+
+.ac-client-detail-danger-zone span {
+  margin-top: 3px;
+  color: var(--color-on-surface-variant);
+  font-size: 11px;
+}
+
+.ac-client-kafka-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ac-client-kafka-form > .ac-btn-primary {
+  align-self: flex-start;
+}
+
+.ac-modal-overlay--above-drawer {
+  z-index: 1120;
+}
+
+html[data-ac-theme='dark'] .ac-admin-client-row:hover td,
+html[data-ac-theme='dark'] .ac-admin-client-row:focus-visible td {
+  background: rgba(53, 212, 179, 0.045);
+}
+
+html[data-ac-theme='dark'] .ac-client-detail-summary-grid > div,
+html[data-ac-theme='dark'] .ac-client-detail-key-values {
+  border-color: rgba(120, 143, 166, 0.22);
+  background: rgba(13, 18, 24, 0.72);
+}
+
+html[data-ac-theme='dark'] .ac-client-detail-summary-grid strong,
+html[data-ac-theme='dark'] .ac-client-detail-key-values code,
+html[data-ac-theme='dark'] .ac-client-detail-drawer__identity h2 {
+  color: #e8eef6;
+}
+
+@media (max-width: 768px) {
+  .ac-client-detail-drawer {
+    max-width: 100vw;
+  }
+
+  .ac-client-detail-drawer__header,
+  .ac-client-detail-drawer__body {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .ac-client-detail-drawer .ac-drawer-tabs {
+    gap: 12px;
+    overflow-x: auto;
+    padding: 0 16px;
+  }
+
+  .ac-client-detail-drawer .ac-drawer-tab {
+    white-space: nowrap;
+  }
+
+  .ac-client-detail-danger-zone {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 520px) {
+  .ac-client-detail-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ac-client-detail-key-values {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+.ac-client-detail-key-values code {
+    margin-bottom: 8px;
+  }
+}

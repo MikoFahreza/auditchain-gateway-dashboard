@@ -94,6 +94,8 @@ const parseRawData = (rawData) => {
 
 const pickFirst = (...values) => values.find(value => value !== undefined && value !== null && String(value).trim() !== '');
 
+const hasDisplayValue = (value) => value !== undefined && value !== null && String(value).trim() !== '' && String(value).trim() !== '-';
+
 const truncateMiddle = (value = '', maxLength = 26) => {
   const text = String(value || '');
   if (text.length <= maxLength) return text;
@@ -511,6 +513,11 @@ function WebUsersView({ onLogout }) {
     }, 250);
   };
 
+  const selectedHasSource = selectedUser && hasDisplayValue(selectedUser.sourceTable);
+  const selectedHasResource = selectedUser && hasDisplayValue(selectedUser.latestActivity?.resource);
+  const selectedHasAuditLogId = selectedUser && hasDisplayValue(selectedUser.latestActivity?.logId);
+  const selectedHasRawAttributes = selectedUser && selectedUser.rawEntries.length > 0;
+
   return (
     <>
       <section className="ac-web-users-page-head">
@@ -876,36 +883,42 @@ function WebUsersView({ onLogout }) {
                       </span>
                     </dd>
                   </div>
-                  <div>
-                    <dt>Resource</dt>
-                    <dd>{selectedUser.latestActivity?.resource || 'Waiting for audit log'}</dd>
-                  </div>
-                  <div>
-                    <dt>Audit log ID</dt>
-                    <dd className="ac-table__mono">{selectedUser.latestActivity?.logId || '-'}</dd>
-                  </div>
-                </dl>
-              </section>
-
-              <section>
-                <div className="ac-web-users-drawer__section-title">Source</div>
-                <dl className="ac-web-users-detail-list">
-                  <div>
-                    <dt>Source table</dt>
-                    <dd>{selectedUser.sourceTable === '-' ? 'Not returned by this endpoint' : selectedUser.sourceTable}</dd>
-                  </div>
-                  {selectedUser.technicalUserId && (
+                  {selectedHasResource && (
                     <div>
-                      <dt>Technical user ID</dt>
-                      <dd className="ac-table__mono">{selectedUser.technicalUserId}</dd>
+                      <dt>Resource</dt>
+                      <dd>{selectedUser.latestActivity.resource}</dd>
+                    </div>
+                  )}
+                  {selectedHasAuditLogId && (
+                    <div>
+                      <dt>Audit log ID</dt>
+                      <dd className="ac-table__mono">{selectedUser.latestActivity.logId}</dd>
                     </div>
                   )}
                 </dl>
               </section>
 
-              <section>
-                <div className="ac-web-users-drawer__section-title">Raw Attributes</div>
-                {selectedUser.rawEntries.length > 0 ? (
+              {selectedHasSource && (
+                <section>
+                  <div className="ac-web-users-drawer__section-title">Source</div>
+                  <dl className="ac-web-users-detail-list">
+                    <div>
+                      <dt>Source table</dt>
+                      <dd>{selectedUser.sourceTable}</dd>
+                    </div>
+                    {selectedUser.technicalUserId && (
+                      <div>
+                        <dt>Technical user ID</dt>
+                        <dd className="ac-table__mono">{selectedUser.technicalUserId}</dd>
+                      </div>
+                    )}
+                  </dl>
+                </section>
+              )}
+
+              {selectedHasRawAttributes && (
+                <section>
+                  <div className="ac-web-users-drawer__section-title">Raw Attributes</div>
                   <dl className="ac-web-users-raw-list">
                     {selectedUser.rawEntries.slice(0, 12).map(([key, value]) => (
                       <div key={`${selectedUser.id}-${key}`}>
@@ -914,10 +927,8 @@ function WebUsersView({ onLogout }) {
                       </div>
                     ))}
                   </dl>
-                ) : (
-                  <div className="ac-web-users-drawer__empty">No raw attributes returned by this endpoint.</div>
-                )}
-              </section>
+                </section>
+              )}
             </div>
 
             <div className="ac-web-users-drawer__actions">
